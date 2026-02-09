@@ -1,0 +1,56 @@
+<script>
+async function downloadAgentsCSV() {
+  const client = document.getElementById('client').value.trim();   // same input as token generator
+  const token = document.getElementById('accessToken').value.trim();
+
+  const output = document.getElementById('output');
+  output.style.display = 'block';
+
+  if (!client || !token) {
+    output.textContent = "Please generate the access token first!";
+    return;
+  }
+
+  output.textContent = "Fetching agents...";
+
+  try {
+    const res = await fetch(`https://${client}-api.aswat.co/callHistory/listAgents?deleted=false`, {
+      headers: { 'access_token': token }
+    });
+
+    const agents = await res.json();
+
+    if (!Array.isArray(agents) || agents.length === 0) {
+      output.textContent = "No agents found.";
+      return;
+    }
+
+    // Convert JSON to CSV
+    const csvRows = [];
+    const headers = Object.keys(agents[0]);
+    csvRows.push(headers.join(','));
+
+    agents.forEach(agent => {
+      const values = headers.map(h => `"${(agent[h] || '').toString().replace(/"/g, '""')}"`);
+      csvRows.push(values.join(','));
+    });
+
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'agents.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+
+    output.textContent = "CSV downloaded successfully!";
+  } catch (err) {
+    console.error(err);
+    output.textContent = "Failed to fetch agents. Check token or network.";
+  }
+}
+</script>
